@@ -45,7 +45,7 @@ def load_model():
 @st.cache_data
 def preprocess(_img, target_size=(256, 256)):
     orig_size = _img.size
-    img = _img.convert("RGB").resize(target_size, resample=Image.Resampling.LANCZOS)
+    img = _img.resize(target_size, resample=Image.Resampling.LANCZOS)
     arr = np.array(img).astype(np.float32)
     arr = arr.transpose(2, 0, 1)
     arr = arr[np.newaxis, ...] / 255.0
@@ -63,7 +63,6 @@ def postprocess(output, orig_size):
 
 @st.cache_data
 def convert_img_to_bytes(img):
-    st.cache_data.clear()
     buf = BytesIO()
     img.save(buf, format="PNG")
     byte_im = buf.getvalue()
@@ -73,9 +72,8 @@ def convert_img_to_bytes(img):
 @st.cache_data
 def preprocess_rgba(_img, target_size=(256, 256)):
     orig_size = _img.size
-    img = _img.convert("RGBA")
-    rgb_img = img.convert("RGB").resize(target_size, Image.Resampling.LANCZOS)
-    alpha = img.split()[-1].resize(target_size, Image.Resampling.LANCZOS)
+    rgb_img = _img.convert("RGB").resize(target_size, Image.Resampling.LANCZOS)
+    alpha = _img.split()[-1].resize(target_size, Image.Resampling.LANCZOS)
     arr = (
         np.array(rgb_img).astype(np.float32).transpose(2, 0, 1)[np.newaxis, ...] / 255.0
     )
@@ -115,6 +113,7 @@ def main():
         try:
             col1, col2 = st.columns(2)
             original_img = Image.open(uploaded_img)
+            input_name = model.get_inputs()[0].name
 
             with col1:
                 st.header("Original Image")
@@ -123,13 +122,11 @@ def main():
             with st.spinner("Upscaling image..."):
                 if original_img.mode == "RGBA":
                     input_arr, alpha_arr, orig_size = preprocess_rgba(original_img)  # type: ignore
-                    input_name = model.get_inputs()[0].name
                     output = model.run(None, {input_name: input_arr})[0]
                     alpha_out = alpha_arr
                     sr_img = postprocess_rgba(output, alpha_out, orig_size)
                 else:
                     input_arr, orig_size = preprocess(original_img)
-                    input_name = model.get_inputs()[0].name
                     output = model.run(None, {input_name: input_arr})[0]
                     sr_img = postprocess(output, orig_size)
 
