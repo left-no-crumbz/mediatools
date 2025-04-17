@@ -1,0 +1,6 @@
+numpy
+onnx
+onnxruntime
+streamlit
+pillow
+torch
