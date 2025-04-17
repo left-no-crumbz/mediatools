@@ -144,7 +144,7 @@ def postprocess_rgba(output, alpha_out, orig_size):
 @profiler
 def main():
     st.image(
-        "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/assets/realesrgan_logo.png",
+        "assets/realesrgan_logo.png",
         use_container_width=True,
     )
     uploaded_img = st.file_uploader(
@@ -168,16 +168,31 @@ def main():
                 st.header("Original Image")
                 st.image(original_img)
 
+            info_placeholder = st.empty()
+            info_placeholder.info("Preparing image for upscaling...")
+
             with st.spinner("Upscaling image..."):
                 if original_img.mode == "RGBA":
+                    info_placeholder.info("⚙ Preprocessing the image...")
                     input_arr, alpha_arr, orig_size = preprocess_rgba(img_bytes)  # type: ignore
+                    info_placeholder.info("🏃‍♀️ Running the model...")
                     output = model.run(None, {input_name: input_arr})[0]
                     alpha_out = alpha_arr
+                    info_placeholder.info("⚙ Postprocessing the image...")
                     sr_img = postprocess_rgba(output, alpha_out, orig_size)
+                    info_placeholder.info("🏁 Finished!")
+
                 else:
+                    info_placeholder.info("⚙ Preprocessing the image...")
                     input_arr, orig_size = preprocess(img_bytes)
+                    info_placeholder.info("🏃‍♀️ Running the model...")
                     output = model.run(None, {input_name: input_arr})[0]
+                    info_placeholder.info("⚙ Postprocessing the image...")
                     sr_img = postprocess(output, orig_size)
+                    info_placeholder.info("🏁 Finished!")
+
+            time.sleep(3)
+            info_placeholder.empty()
 
             if sr_img:
                 with col2:
