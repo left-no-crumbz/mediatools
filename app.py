@@ -28,8 +28,14 @@ local_sources_watcher.get_module_paths = patched_get_module_paths
 @st.cache_resource
 def load_model():
     try:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        session = ort.InferenceSession("real-esrgan.onnx")
+        if torch.cuda.is_available():
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            device = torch.device("cuda")
+        else:
+            providers = ["CPUExecutionProvider"]
+            device = torch.device("cpu")
+        session = ort.InferenceSession("real-esrgan.onnx", providers=providers)
+
         return device, session
     except RuntimeError as e:
         print(f"{e}")
