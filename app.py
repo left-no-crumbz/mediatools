@@ -1,3 +1,4 @@
+import time
 from io import BytesIO
 from types import ModuleType
 
@@ -11,6 +12,17 @@ from streamlit.watcher import local_sources_watcher
 original_get_module_paths = local_sources_watcher.get_module_paths
 
 
+def profiler(func):
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} took {elapsed:.4f} seconds to execute")
+        return result
+
+    return wrapper
+
+
 def patched_get_module_paths(module: ModuleType) -> set[str]:
     if module.__name__.startswith("torch"):
         return set([])
@@ -21,6 +33,7 @@ def patched_get_module_paths(module: ModuleType) -> set[str]:
 local_sources_watcher.get_module_paths = patched_get_module_paths
 
 
+@profiler
 @st.cache_resource
 def load_model():
     try:
@@ -42,8 +55,10 @@ def load_model():
         raise e
 
 
+@profiler
 @st.cache_data
-def preprocess(_img, target_size=(256, 256)):
+def preprocess(img_bytes, target_size=(256, 256)):
+    _img = Image.open(BytesIO(img_bytes))
     orig_size = _img.size
     img = _img.resize(target_size, resample=Image.Resampling.LANCZOS)
     arr = np.array(img).astype(np.float32)
@@ -52,6 +67,7 @@ def preprocess(_img, target_size=(256, 256)):
     return arr, orig_size
 
 
+@profiler
 @st.cache_data
 def postprocess(output, orig_size):
     arr = output.squeeze().transpose(1, 2, 0)
@@ -61,6 +77,7 @@ def postprocess(output, orig_size):
     return img
 
 
+@profiler
 @st.cache_data
 def convert_img_to_bytes(img):
     buf = BytesIO()
@@ -69,8 +86,10 @@ def convert_img_to_bytes(img):
     return byte_im
 
 
+@profiler
 @st.cache_data
-def preprocess_rgba(_img, target_size=(256, 256)):
+def preprocess_rgba(img_bytes, target_size=(256, 256)):
+    _img = Image.open(BytesIO(img_bytes))
     orig_size = _img.size
     rgb_img = _img.convert("RGB").resize(target_size, Image.Resampling.LANCZOS)
     alpha = _img.split()[-1].resize(target_size, Image.Resampling.LANCZOS)
@@ -81,6 +100,7 @@ def preprocess_rgba(_img, target_size=(256, 256)):
     return arr, alpha_arr, orig_size
 
 
+@profiler
 @st.cache_data
 def postprocess_rgba(output, alpha_out, orig_size):
     arr = output.squeeze().transpose(1, 2, 0)
@@ -96,9 +116,9 @@ def postprocess_rgba(output, alpha_out, orig_size):
     return img
 
 
+@profiler
 def main():
     st.title("LOCAL ESRGAN")
-
     uploaded_img = st.file_uploader(
         "Please upload a file you want to upscale.",
         type=["png", "jpg", "jpeg", "webp"],
@@ -110,6 +130,7 @@ def main():
     st.info(f"Using device: {device}")
 
     if uploaded_img:
+        img_bytes = uploaded_img.read()
         try:
             col1, col2 = st.columns(2)
             original_img = Image.open(uploaded_img)
@@ -121,12 +142,12 @@ def main():
 
             with st.spinner("Upscaling image..."):
                 if original_img.mode == "RGBA":
-                    input_arr, alpha_arr, orig_size = preprocess_rgba(original_img)  # type: ignore
+                    input_arr, alpha_arr, orig_size = preprocess_rgba(img_bytes)  # type: ignore
                     output = model.run(None, {input_name: input_arr})[0]
                     alpha_out = alpha_arr
                     sr_img = postprocess_rgba(output, alpha_out, orig_size)
                 else:
-                    input_arr, orig_size = preprocess(original_img)
+                    input_arr, orig_size = preprocess(img_bytes)
                     output = model.run(None, {input_name: input_arr})[0]
                     sr_img = postprocess(output, orig_size)
 
