@@ -71,7 +71,9 @@ def preprocess(img_bytes, target_size=(256, 256)):
 @st.cache_data
 def postprocess(output, orig_size):
     arr = output.squeeze().transpose(1, 2, 0)
-    arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
+    np.clip(arr, 0, 1, out=arr)
+    arr *= 255.0
+    arr = arr.astype(np.uint8, copy=False)
     img = Image.fromarray(arr)
     img = img.resize(orig_size, resample=Image.Resampling.LANCZOS)
     return img
