@@ -1,11 +1,11 @@
-import os
 from io import BytesIO
 from types import ModuleType
 
+import numpy as np
+import onnxruntime as ort
 import streamlit as st
 import torch
 from PIL import Image
-from RealESRGAN import RealESRGAN
 from streamlit.watcher import local_sources_watcher
 
 original_get_module_paths = local_sources_watcher.get_module_paths
@@ -21,23 +21,41 @@ def patched_get_module_paths(module: ModuleType) -> set[str]:
 local_sources_watcher.get_module_paths = patched_get_module_paths
 
 
-@st.cache_data
+# TODO: Range slider for upscale size
+# TODO: Convert pytorch model to ONNX
+
+
+@st.cache_resource
 def load_model():
     try:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        WEIGHTS_PATH = "weights/RealESRGAN_x4.pth"
-        download_weights = not os.path.exists(WEIGHTS_PATH)
-        model = RealESRGAN(device, scale=4)
-        model.load_weights(WEIGHTS_PATH, download=download_weights)
-        return device, model
+        session = ort.InferenceSession("real-esrgan.onnx")
+        return device, session
     except RuntimeError as e:
         print(f"{e}")
         if "CUDA" in str(e):
             device = torch.device("cpu")
-            model = RealESRGAN(device, scale=4)
-            model.load_weights(WEIGHTS_PATH, download=download_weights)
-            return device, model
+            session = ort.InferenceSession("real-esrgan.onnx")
+            return device, session
         raise e
+
+
+@st.cache_data
+def preprocess(img, target_size=(256, 256)):
+    orig_size = img.size
+    img = img.convert("RGB").resize(target_size, resample=Image.Resampling.LANCZOS)
+    arr = np.array(img).astype(np.float32)
+    arr = arr.transpose(2, 0, 1)
+    arr = arr[np.newaxis, ...] / 255.0
+    return arr, orig_size
+
+
+def postprocess(output, orig_size):
+    arr = output.squeeze().transpose(1, 2, 0)
+    arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
+    img = Image.fromarray(arr)
+    img = img.resize(orig_size, resample=Image.Resampling.LANCZOS)
+    return img
 
 
 @st.cache_data
@@ -83,7 +101,10 @@ def main():
 
             with st.spinner("Upscaling image..."):
                 rgb_img = ensure_rgb(original_img)
-                sr_img = model.predict(rgb_img)
+                input_arr, orig_size = preprocess(rgb_img)
+                input_name = model.get_inputs()[0].name
+                output = model.run(None, {input_name: input_arr})[0]
+                sr_img = postprocess(output, orig_size)
 
             if sr_img:
                 with col2:
