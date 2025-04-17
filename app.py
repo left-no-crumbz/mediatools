@@ -21,10 +21,6 @@ def patched_get_module_paths(module: ModuleType) -> set[str]:
 local_sources_watcher.get_module_paths = patched_get_module_paths
 
 
-# TODO: Range slider for upscale size
-# TODO: Convert pytorch model to ONNX
-
-
 @st.cache_resource
 def load_model():
     try:
@@ -47,15 +43,16 @@ def load_model():
 
 
 @st.cache_data
-def preprocess(img, target_size=(256, 256)):
-    orig_size = img.size
-    img = img.convert("RGB").resize(target_size, resample=Image.Resampling.LANCZOS)
+def preprocess(_img, target_size=(256, 256)):
+    orig_size = _img.size
+    img = _img.convert("RGB").resize(target_size, resample=Image.Resampling.LANCZOS)
     arr = np.array(img).astype(np.float32)
     arr = arr.transpose(2, 0, 1)
     arr = arr[np.newaxis, ...] / 255.0
     return arr, orig_size
 
 
+@st.cache_data
 def postprocess(output, orig_size):
     arr = output.squeeze().transpose(1, 2, 0)
     arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
@@ -74,13 +71,31 @@ def convert_img_to_bytes(img):
 
 
 @st.cache_data
-def ensure_rgb(_image):
-    st.cache_data.clear()
-    if _image.mode == "RGBA":
-        background = Image.new("RGB", _image.size, (255, 255, 255))
-        result = Image.alpha_composite(background.convert("RGBA"), _image)
-        return result.convert("RGB")
-    return _image.convert("RGB")
+def preprocess_rgba(_img, target_size=(256, 256)):
+    orig_size = _img.size
+    img = _img.convert("RGBA")
+    rgb_img = img.convert("RGB").resize(target_size, Image.Resampling.LANCZOS)
+    alpha = img.split()[-1].resize(target_size, Image.Resampling.LANCZOS)
+    arr = (
+        np.array(rgb_img).astype(np.float32).transpose(2, 0, 1)[np.newaxis, ...] / 255.0
+    )
+    alpha_arr = np.array(alpha).astype(np.float32)[np.newaxis, np.newaxis, ...] / 255.0
+    return arr, alpha_arr, orig_size
+
+
+@st.cache_data
+def postprocess_rgba(output, alpha_out, orig_size):
+    arr = output.squeeze().transpose(1, 2, 0)
+    arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
+    img = Image.fromarray(arr).resize(orig_size, Image.Resampling.LANCZOS)
+    alpha = alpha_out.squeeze()
+    alpha = np.clip(alpha * 255.0, 0, 255).astype(np.uint8)
+    alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha).resize(
+        orig_size, Image.Resampling.LANCZOS
+    )
+    img.putalpha(alpha_img)
+
+    return img
 
 
 def main():
@@ -106,11 +121,17 @@ def main():
                 st.image(original_img)
 
             with st.spinner("Upscaling image..."):
-                rgb_img = ensure_rgb(original_img)
-                input_arr, orig_size = preprocess(rgb_img)
-                input_name = model.get_inputs()[0].name
-                output = model.run(None, {input_name: input_arr})[0]
-                sr_img = postprocess(output, orig_size)
+                if original_img.mode == "RGBA":
+                    input_arr, alpha_arr, orig_size = preprocess_rgba(original_img)  # type: ignore
+                    input_name = model.get_inputs()[0].name
+                    output = model.run(None, {input_name: input_arr})[0]
+                    alpha_out = alpha_arr
+                    sr_img = postprocess_rgba(output, alpha_out, orig_size)
+                else:
+                    input_arr, orig_size = preprocess(original_img)
+                    input_name = model.get_inputs()[0].name
+                    output = model.run(None, {input_name: input_arr})[0]
+                    sr_img = postprocess(output, orig_size)
 
             if sr_img:
                 with col2:
