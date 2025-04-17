@@ -143,7 +143,10 @@ def postprocess_rgba(output, alpha_out, orig_size):
 
 @profiler
 def main():
-    st.title("LOCAL ESRGAN")
+    st.image(
+        "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/assets/realesrgan_logo.png",
+        use_container_width=True,
+    )
     uploaded_img = st.file_uploader(
         "Please upload a file you want to upscale.",
         type=["png", "jpg", "jpeg", "webp"],
