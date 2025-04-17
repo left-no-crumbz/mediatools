@@ -60,7 +60,13 @@ def load_model():
 def preprocess(img_bytes, target_size=(256, 256)):
     _img = Image.open(BytesIO(img_bytes))
     orig_size = _img.size
-    img = _img.resize(target_size, resample=Image.Resampling.LANCZOS)
+
+    if target_size[0] > orig_size[0] or target_size[1] > orig_size[1]:
+        resample_method = Image.Resampling.LANCZOS
+    else:
+        resample_method = Image.Resampling.BILINEAR
+
+    img = _img.resize(target_size, resample_method)
     arr = np.array(img).astype(np.float32)
     arr = arr.transpose(2, 0, 1)
     arr = arr[np.newaxis, ...] / 255.0
@@ -71,16 +77,19 @@ def preprocess(img_bytes, target_size=(256, 256)):
 @st.cache_data
 def postprocess(output, orig_size):
     arr = output.squeeze().transpose(1, 2, 0)
-    np.clip(arr, 0, 1, out=arr)
-    arr *= 255.0
-    arr = arr.astype(np.uint8, copy=False)
-    img = Image.fromarray(arr)
-    img = img.resize(orig_size, resample=Image.Resampling.LANCZOS)
+    arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8, copy=False)
+    out_size = (arr.shape[1], arr.shape[0])
+
+    if orig_size[0] > out_size[0] or orig_size[1] > out_size[1]:
+        resample_method = Image.Resampling.LANCZOS
+    else:
+        resample_method = Image.Resampling.BILINEAR
+
+    img = Image.fromarray(arr).resize(orig_size, resample_method)
     return img
 
 
 @profiler
-@st.cache_data
 def convert_img_to_bytes(img):
     buf = BytesIO()
     img.save(buf, format="PNG")
@@ -93,8 +102,14 @@ def convert_img_to_bytes(img):
 def preprocess_rgba(img_bytes, target_size=(256, 256)):
     _img = Image.open(BytesIO(img_bytes))
     orig_size = _img.size
-    rgb_img = _img.convert("RGB").resize(target_size, Image.Resampling.LANCZOS)
-    alpha = _img.split()[-1].resize(target_size, Image.Resampling.LANCZOS)
+
+    if target_size[0] > orig_size[0] or target_size[1] > orig_size[1]:
+        resample_method = Image.Resampling.LANCZOS
+    else:
+        resample_method = Image.Resampling.BILINEAR
+
+    rgb_img = _img.convert("RGB").resize(target_size, resample_method)
+    alpha = _img.split()[-1].resize(target_size, resample_method)
     arr = (
         np.array(rgb_img).astype(np.float32).transpose(2, 0, 1)[np.newaxis, ...] / 255.0
     )
@@ -107,11 +122,19 @@ def preprocess_rgba(img_bytes, target_size=(256, 256)):
 def postprocess_rgba(output, alpha_out, orig_size):
     arr = output.squeeze().transpose(1, 2, 0)
     arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
-    img = Image.fromarray(arr).resize(orig_size, Image.Resampling.LANCZOS)
+
+    out_size = (arr.shape[1], arr.shape[0])
+
+    if orig_size[0] > out_size[0] or orig_size[1] > out_size[1]:
+        resample_method = Image.Resampling.LANCZOS
+    else:
+        resample_method = Image.Resampling.BILINEAR
+
+    img = Image.fromarray(arr).resize(orig_size, resample_method)
     alpha = alpha_out.squeeze()
     alpha = np.clip(alpha * 255.0, 0, 255).astype(np.uint8)
     alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha).resize(
-        orig_size, Image.Resampling.LANCZOS
+        orig_size, resample_method
     )
     img.putalpha(alpha_img)
 
@@ -135,7 +158,7 @@ def main():
         img_bytes = uploaded_img.read()
         try:
             col1, col2 = st.columns(2)
-            original_img = Image.open(uploaded_img)
+            original_img = Image.open(BytesIO(img_bytes))
             input_name = model.get_inputs()[0].name
 
             with col1:
