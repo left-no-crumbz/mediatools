@@ -38,13 +38,9 @@ class Strategy:
     def __init__(
         self,
         img_bytes: np.ndarray,
-        do_retain_size: bool,
-        orig_size: tuple[int, int],
         target_size: tuple[int, int] = (256, 256),
     ) -> None:
         self._img_bytes = img_bytes
-        self._do_retain_size = do_retain_size
-        self._orig_size = orig_size
         self._target_size = target_size
 
     def get_resample_method(
@@ -64,6 +60,36 @@ class Strategy:
     # to be abstracted
     def postprocess(self):
         pass
+
+
+class RGBStrategy(Strategy):
+    def preprocesss(self) -> tuple[np.ndarray, tuple[int, int]]:
+        _img = Image.open(BytesIO(self._img_bytes))
+        orig_size = _img.size
+
+        resample_method = self.get_resample_method(self._target_size, orig_size)
+
+        img = _img.resize(self._target_size, resample_method)
+        arr = np.array(img).astype(np.float32)
+        arr = arr.transpose(2, 0, 1)
+        arr = arr[np.newaxis, ...] / 255.0
+        return arr, orig_size
+
+    def postprocess(
+        self, orig_size: tuple[int, int], do_retain_size: bool
+    ) -> Image.Image:
+        arr = self._img_bytes.squeeze().transpose(1, 2, 0)
+        arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8, copy=False)
+        out_size = (arr.shape[1], arr.shape[0])
+
+        resample_method = self.get_resample_method(orig_size, out_size)
+
+        if do_retain_size:
+            img = Image.fromarray(arr)
+            return img
+
+        img = Image.fromarray(arr).resize(orig_size, resample_method)
+        return img
 
 
 @profiler
