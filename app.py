@@ -1,6 +1,7 @@
 import time
 from io import BytesIO
 from types import ModuleType
+from typing import Literal
 
 import numpy as np
 import onnxruntime as ort
@@ -31,6 +32,38 @@ def patched_get_module_paths(module: ModuleType) -> set[str]:
 
 
 local_sources_watcher.get_module_paths = patched_get_module_paths
+
+
+class Strategy:
+    def __init__(
+        self,
+        img_bytes: np.ndarray,
+        do_retain_size: bool,
+        orig_size: tuple[int, int],
+        target_size: tuple[int, int] = (256, 256),
+    ) -> None:
+        self._img_bytes = img_bytes
+        self._do_retain_size = do_retain_size
+        self._orig_size = orig_size
+        self._target_size = target_size
+
+    def get_resample_method(
+        self, size1: tuple[int, int], size2: tuple[int, int]
+    ) -> Literal[Image.Resampling.LANCZOS, Image.Resampling.BILINEAR]:
+        if size1[0] > size2[0] or size1[1] > size2[1]:
+            resample_method = Image.Resampling.LANCZOS
+        else:
+            resample_method = Image.Resampling.BILINEAR
+
+        return resample_method
+
+    # to be abstracted
+    def preprocesss(self):
+        pass
+
+    # to be abstracted
+    def postprocess(self):
+        pass
 
 
 @profiler
