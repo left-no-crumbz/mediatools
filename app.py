@@ -37,7 +37,7 @@ local_sources_watcher.get_module_paths = patched_get_module_paths
 class Strategy:
     def __init__(
         self,
-        img_bytes: np.ndarray,
+        img_bytes: bytes,
         target_size: tuple[int, int] = (256, 256),
     ) -> None:
         self._img_bytes = img_bytes
@@ -76,9 +76,9 @@ class RGBStrategy(Strategy):
         return arr, orig_size
 
     def postprocess(
-        self, orig_size: tuple[int, int], do_retain_size: bool
+        self, model_output: np.ndarray, orig_size: tuple[int, int], do_retain_size: bool
     ) -> Image.Image:
-        arr = self._img_bytes.squeeze().transpose(1, 2, 0)
+        arr = model_output.squeeze().transpose(1, 2, 0)
         arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8, copy=False)
         out_size = (arr.shape[1], arr.shape[0])
 
@@ -89,6 +89,57 @@ class RGBStrategy(Strategy):
             return img
 
         img = Image.fromarray(arr).resize(orig_size, resample_method)
+        return img
+
+
+class RGBAStrategy(Strategy):
+    def preprocess(self) -> tuple[np.ndarray, np.ndarray, tuple[int, int]]:
+        _img = Image.open(BytesIO(self._img_bytes))
+        orig_size = _img.size
+
+        resample_method = self.get_resample_method(self._target_size, orig_size)
+
+        rgb_img = _img.convert("RGB").resize(self._target_size, resample_method)
+        alpha = _img.split()[-1].resize(self._target_size, resample_method)
+        arr = (
+            np.array(rgb_img).astype(np.float32).transpose(2, 0, 1)[np.newaxis, ...]
+            / 255.0
+        )
+        alpha_arr = (
+            np.array(alpha).astype(np.float32)[np.newaxis, np.newaxis, ...] / 255.0
+        )
+        return arr, alpha_arr, orig_size
+
+    def postprocess(
+        self,
+        model_output: np.ndarray,
+        alpha_out: np.ndarray,
+        orig_size: tuple[int, int],
+        do_retain_size: bool,
+    ) -> Image.Image:
+        arr = model_output.squeeze().transpose(1, 2, 0)
+        arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
+
+        out_size = (arr.shape[1], arr.shape[0])
+
+        resample_method = self.get_resample_method(orig_size, out_size)
+
+        if do_retain_size:
+            img = Image.fromarray(arr).resize(orig_size, resample_method)
+
+        img = Image.fromarray(arr)
+        alpha = alpha_out.squeeze()
+        alpha = np.clip(alpha * 255.0, 0, 255).astype(np.uint8)
+
+        if do_retain_size:
+            alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha)
+
+        alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha).resize(
+            orig_size, resample_method
+        )
+
+        img.putalpha(alpha_img)
+
         return img
 
 
@@ -117,7 +168,7 @@ def load_model():
 @profiler
 @st.cache_data
 def preprocess(img_bytes, target_size=(256, 256)):
-    _img = Image.open(BytesIO(img_bytes))
+    _img = Image.open(BytesIO(img_bytes)).convert("RGB")
     orig_size = _img.size
 
     if target_size[0] > orig_size[0] or target_size[1] > orig_size[1]:
@@ -236,6 +287,9 @@ def main():
                     input_arr, alpha_arr, orig_size = preprocess_rgba(img_bytes)  # type: ignore
                     info_placeholder.info("🏃‍♀️ Running the model...")
                     output = model.run(None, {input_name: input_arr})[0]
+
+                    print(f"Output: {type(output)}")
+
                     alpha_out = alpha_arr
                     info_placeholder.info("⚙ Postprocessing the image...")
                     sr_img = postprocess_rgba(output, alpha_out, orig_size)
@@ -246,11 +300,13 @@ def main():
                     input_arr, orig_size = preprocess(img_bytes)
                     info_placeholder.info("🏃‍♀️ Running the model...")
                     output = model.run(None, {input_name: input_arr})[0]
+
+                    print(f"Output: {type(output)}")
+
                     info_placeholder.info("⚙ Postprocessing the image...")
                     sr_img = postprocess(output, orig_size)
                     info_placeholder.info("🏁 Finished!")
 
-            time.sleep(3)
             info_placeholder.empty()
 
             if sr_img:
