@@ -65,7 +65,7 @@ class Strategy:
 class RGBStrategy(Strategy):
     @st.cache_data
     def preprocess(_self) -> tuple[np.ndarray, tuple[int, int]]:
-        _img = Image.open(BytesIO(_self._img_bytes))
+        _img = Image.open(BytesIO(_self._img_bytes)).convert("RGB")
         orig_size = _img.size
 
         resample_method = _self.get_resample_method(_self._target_size, orig_size)
@@ -325,12 +325,18 @@ def main():
                     ),
                 )
 
-                # sr_img = postprocess_rgba(output, alpha_out, orig_size)
                 info_placeholder.info("🏁 Finished!")
 
             else:
+                strategy = cast(RGBStrategy, strategy)
+
                 info_placeholder.info("⚙ Preprocessing the image...")
-                input_arr, orig_size = preprocess(img_bytes)
+
+                input_arr, orig_size = cast(
+                    tuple[np.ndarray, tuple[int, int]],
+                    strategy.preprocess(),
+                )
+
                 info_placeholder.info("🏃‍♀️ Running the model...")
                 output = model.run(None, {input_name: input_arr})[0]
 
