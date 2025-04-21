@@ -192,7 +192,7 @@ def main():
             st.download_button(
                 label="Download image",
                 data=buffer,
-                file_name="sr_image.png",
+                file_name=f"{uploaded_img.name.split(".")[0]}-upscaled.png",
                 mime="image/png",
                 icon=":material/download:",
                 use_container_width=True,
