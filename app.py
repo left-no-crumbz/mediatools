@@ -1,3 +1,4 @@
+from functools import lru_cache
 from io import BytesIO
 from time import perf_counter
 from types import ModuleType
@@ -27,8 +28,10 @@ def profiler(func):
 # TODO: PNG to SVG
 # FIXME: Rectangular images not being processed
 # FIXME: Bug where the entire program is re-run if a button or the checkbox is pressed
+# TODO: Pad the image instead of resizing it
 
 
+@lru_cache
 def patched_get_module_paths(module: ModuleType) -> set[str]:
     if module.__name__.startswith("torch"):
         return set([])
@@ -48,8 +51,9 @@ class Strategy:
         self._img_bytes = img_bytes
         self._target_size = target_size
 
+    @st.cache_data
     def get_resample_method(
-        self, size1: tuple[int, int], size2: tuple[int, int]
+        _self, size1: tuple[int, int], size2: tuple[int, int]
     ) -> Literal[Image.Resampling.LANCZOS, Image.Resampling.BILINEAR]:
         if size1[0] > size2[0] or size1[1] > size2[1]:
             resample_method = Image.Resampling.LANCZOS
@@ -57,6 +61,12 @@ class Strategy:
             resample_method = Image.Resampling.BILINEAR
 
         return resample_method
+
+    @st.cache_data(show_spinner=False)
+    def run_model(
+        _self, _model: ort.InferenceSession, input_name: str, input_arr: np.ndarray
+    ):
+        return _model.run(None, {input_name: input_arr})[0]
 
     # to be abstracted
     def preprocess(self):
@@ -263,15 +273,14 @@ def main():
         original_img = Image.open(BytesIO(img_bytes))
         input_name = model.get_inputs()[0].name
 
+        print(f"type of input_name: {type(input_name)}")
+
         with col1:
             st.header("Original Image")
             st.image(original_img)
             st.write(f"Dimensions: {original_img.width} x {original_img.height}")
 
-        info_placeholder = st.empty()
-        info_placeholder.info("Preparing image for upscaling...")
-
-        with st.spinner("Upscaling image..."):
+        with st.status("Upscaling image...", expanded=True) as status:
             strategy = (
                 RGBStrategy(img_bytes)
                 if original_img.mode != "RGBA"
@@ -286,7 +295,7 @@ def main():
             if original_img.mode == "RGBA":
                 strategy = cast(RGBAStrategy, strategy)
 
-                info_placeholder.info("⚙ Preprocessing the image...")
+                st.write("📐 Preprocessing the image...")
                 # input_arr, alpha_arr, orig_size = preprocess_rgba(img_bytes)  # type: ignore
 
                 input_arr, alpha_arr, orig_size, was_reshaped = cast(
@@ -294,13 +303,14 @@ def main():
                     strategy.preprocess(),
                 )
 
-                info_placeholder.info("🏃‍♀️ Running the model...")
-                output = model.run(None, {input_name: input_arr})[0]
+                st.write("🏃 Running the model...")
+                # output = model.run(None, {input_name: input_arr})[0]
+                output = strategy.run_model(model, input_name, input_arr)
 
                 print(f"Output: {type(output)}")
 
                 alpha_out = alpha_arr
-                info_placeholder.info("⚙ Postprocessing the image...")
+                st.write("✨ Postprocessing the image...")
 
                 sr_img = cast(
                     Image.Image,
@@ -313,33 +323,32 @@ def main():
                     ),
                 )
 
-                info_placeholder.info("🏁 Finished!")
+                status.update(label="🏁 Finished!", state="complete", expanded=False)
 
             else:
                 strategy = cast(RGBStrategy, strategy)
 
-                info_placeholder.info("⚙ Preprocessing the image...")
+                st.write("📐 Preprocessing the image...")
 
                 input_arr, orig_size, was_reshaped = cast(
                     tuple[np.ndarray, tuple[int, int], bool],
                     strategy.preprocess(),
                 )
 
-                info_placeholder.info("🏃‍♀️ Running the model...")
-                output = model.run(None, {input_name: input_arr})[0]
+                st.write("🏃‍♀️ Running the model...")
+                # output = model.run(None, {input_name: input_arr})[0]
+                output = strategy.run_model(model, input_name, input_arr)
 
                 print(f"Output: {type(output)}")
 
-                info_placeholder.info("⚙ Postprocessing the image...")
+                st.write("✨ Postprocessing the image...")
 
                 sr_img = strategy.postprocess(
                     output, orig_size, was_reshaped, do_retain_size
                 )
 
                 # sr_img = postprocess(output, orig_size)
-                info_placeholder.info("🏁 Finished!")
-
-        info_placeholder.empty()
+                status.update(label="🏁 Finished!", state="complete", expanded=False)
 
         if sr_img:
             with col2:
