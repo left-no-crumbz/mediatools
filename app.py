@@ -32,6 +32,7 @@ def profiler(func):
 # FIXME: Rectangular images not being processed
 # FIXME: Bug where the entire program is re-run if a button or the checkbox is pressed
 # TODO: Pad the image instead of resizing it
+# TODO: Use fragments if possible
 
 
 @lru_cache
@@ -75,6 +76,11 @@ def convert_img_to_bytes(img):
     return byte_im
 
 
+@st.fragment()
+def show_checkbox() -> bool:
+    return st.checkbox("Retain original size")
+
+
 @profiler
 def main():
     st.image(
@@ -87,7 +93,7 @@ def main():
         accept_multiple_files=False,
     )
 
-    do_retain_size = st.checkbox("Retain original size")
+    do_retain_size = show_checkbox()
 
     device, model = load_model()
 
