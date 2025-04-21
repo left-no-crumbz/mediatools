@@ -4,3 +4,4 @@ onnxruntime
 streamlit
 pillow
 torch
+streamlit-image-comparison
