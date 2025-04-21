@@ -39,6 +39,17 @@ def main(args):
             },
         )
 
+    import numpy as np
+    import onnxruntime as ort
+
+    test_input = np.random.rand(1, 3, 64, 64).astype(np.float32)
+    session = ort.InferenceSession("real-esrgan.onnx")
+    input_name = session.get_inputs()[0].name
+    output = session.run(None, {input_name: test_input})[0]
+
+    print(f"Input shape: {test_input.shape}")
+    print(f"Output shape: {output.shape}")
+
     print(torch_out.shape)
 
 

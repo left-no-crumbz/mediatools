@@ -24,7 +24,9 @@ def profiler(func):
     return wrapper
 
 
-# FIXME: Incorrect caching of results by streamlit
+# TODO: PNG to SVG
+# FIXME: Rectangular images not being processed
+# FIXME: Bug where the entire program is re-run if a button or the checkbox is pressed
 
 
 def patched_get_module_paths(module: ModuleType) -> set[str]:
@@ -66,48 +68,80 @@ class Strategy:
 
 
 class RGBStrategy(Strategy):
-    def preprocess(self) -> tuple[np.ndarray, tuple[int, int]]:
+    def preprocess(self) -> tuple[np.ndarray, tuple[int, int], bool]:
         _img = Image.open(BytesIO(self._img_bytes)).convert("RGB")
         orig_size = _img.size
 
-        resample_method = self.get_resample_method(self._target_size, orig_size)
+        aspect_ratio = orig_size[0] / orig_size[1]
+        is_square = abs(aspect_ratio - 1.0) < 0.01
 
-        img = _img.resize(self._target_size, resample_method)
+        if not is_square:
+            _img = _img.resize(
+                self._target_size,
+                self.get_resample_method(self._target_size, orig_size),
+            )
 
-        arr = np.array(img).astype(np.float32)
+        arr = np.array(_img).astype(np.float32)
         arr = arr.transpose(2, 0, 1)
         arr = arr[np.newaxis, ...] / 255.0
-        return arr, orig_size
+        return arr, orig_size, (not is_square)
 
     def postprocess(
         self,
         model_output: np.ndarray,
         orig_size: tuple[int, int],
+        was_reshaped: bool = False,
         do_retain_size: bool = False,
     ) -> Image.Image:
         arr = model_output.squeeze().transpose(1, 2, 0)
         arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8, copy=False)
-        out_size = (arr.shape[1], arr.shape[0])
-
-        resample_method = self.get_resample_method(orig_size, out_size)
+        img = Image.fromarray(arr)
 
         if do_retain_size:
-            img = Image.fromarray(arr).resize(orig_size, resample_method)
-            return img
+            resample_method = self.get_resample_method(
+                (img.width, img.height), orig_size
+            )
+            img = img.resize(orig_size, resample_method)
 
-        img = Image.fromarray(arr)
+        elif was_reshaped:
+            upscale_factor = img.width / self._target_size[0]
+            upscaled_width = int(orig_size[0] * upscale_factor)
+            upscaled_height = int(orig_size[1] * upscale_factor)
+            upscaled_size = (upscaled_width, upscaled_height)
+
+            resample_method = self.get_resample_method(
+                (img.width, img.height), upscaled_size
+            )
+            img = img.resize(upscaled_size, resample_method)
+
+            MAX_PIXELS = 178_956_970
+            current_pixels = img.width * img.height
+            if current_pixels > MAX_PIXELS:
+                st.warning("Upscaled image too big. Resizing to a reasonable size.")
+                scale = (MAX_PIXELS / current_pixels) ** 0.5
+                new_size = (int(img.width * scale), int(img.height * scale))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+        print(f"Original size: {orig_size}, Output image size: {img.size}")
         return img
 
 
 class RGBAStrategy(Strategy):
-    def preprocess(self) -> tuple[np.ndarray, np.ndarray, tuple[int, int]]:
+    def preprocess(self) -> tuple[np.ndarray, np.ndarray, tuple[int, int], bool]:
         _img = Image.open(BytesIO(self._img_bytes))
         orig_size = _img.size
 
-        resample_method = self.get_resample_method(self._target_size, orig_size)
+        aspect_ratio = orig_size[0] / orig_size[1]
+        is_square = abs(aspect_ratio - 1.0) < 0.01
 
-        rgb_img = _img.convert("RGB").resize(self._target_size, resample_method)
-        alpha = _img.split()[-1].resize(self._target_size, resample_method)
+        if not is_square:
+            resample_method = self.get_resample_method(self._target_size, orig_size)
+            rgb_img = _img.convert("RGB").resize(self._target_size, resample_method)
+            alpha = _img.split()[-1].resize(self._target_size, resample_method)
+        else:
+            rgb_img = _img.convert("RGB")
+            alpha = _img.split()[-1]
+
         arr = (
             np.array(rgb_img).astype(np.float32).transpose(2, 0, 1)[np.newaxis, ...]
             / 255.0
@@ -115,37 +149,62 @@ class RGBAStrategy(Strategy):
         alpha_arr = (
             np.array(alpha).astype(np.float32)[np.newaxis, np.newaxis, ...] / 255.0
         )
-        return arr, alpha_arr, orig_size
+        return arr, alpha_arr, orig_size, (not is_square)
 
     def postprocess(
         self,
         model_output: np.ndarray,
         alpha_out: np.ndarray,
         orig_size: tuple[int, int],
+        was_reshaped: bool = False,
         do_retain_size: bool = False,
     ) -> Image.Image:
         arr = model_output.squeeze().transpose(1, 2, 0)
         arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8)
+        img = Image.fromarray(arr)
 
-        out_size = (arr.shape[1], arr.shape[0])
-
-        resample_method = self.get_resample_method(orig_size, out_size)
-
-        if do_retain_size:
-            img = Image.fromarray(arr)
-
-        img = Image.fromarray(arr).resize(orig_size, resample_method)
         alpha = alpha_out.squeeze()
         alpha = np.clip(alpha * 255.0, 0, 255).astype(np.uint8)
+        alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha)
 
         if do_retain_size:
-            alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha)
+            resample_method = self.get_resample_method(
+                (img.width, img.height), orig_size
+            )
+            img = img.resize(orig_size, resample_method)
+            alpha_img = alpha_img.resize(orig_size, resample_method)
+        elif was_reshaped:
+            upscale_factor = img.width / self._target_size[0]
+            upscaled_width = int(orig_size[0] * upscale_factor)
+            upscaled_height = int(orig_size[1] * upscale_factor)
+            upscaled_size = (upscaled_width, upscaled_height)
 
-        alpha_img = Image.fromarray(alpha[0] if alpha.ndim == 3 else alpha).resize(
-            orig_size, resample_method
-        )
+            resample_method = self.get_resample_method(
+                (img.width, img.height), upscaled_size
+            )
+
+            img = img.resize(upscaled_size, resample_method)
+            alpha_img = alpha_img.resize(upscaled_size, resample_method)
+        else:
+            upscale_factor = img.width / orig_size[0]
+            new_alpha_size = (
+                int(alpha_img.width * upscale_factor),
+                int(alpha_img.height * upscale_factor),
+            )
+            alpha_img = alpha_img.resize(new_alpha_size, Image.Resampling.LANCZOS)
+
+        MAX_PIXELS = 178_956_970
+        current_pixels = img.width * img.height
+
+        if current_pixels > MAX_PIXELS:
+            st.warning("Upscaled image too big. Resizing to a reasonable size.")
+            scale = (MAX_PIXELS / current_pixels) ** 0.5
+            new_size = (int(img.width * scale), int(img.height * scale))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+            alpha_img = alpha_img.resize(new_size, Image.Resampling.LANCZOS)
 
         img.putalpha(alpha_img)
+        print(f"Original size: {orig_size}, Output image size: {img.size}")
 
         return img
 
@@ -207,6 +266,7 @@ def main():
         with col1:
             st.header("Original Image")
             st.image(original_img)
+            st.write(f"Dimensions: {original_img.width} x {original_img.height}")
 
         info_placeholder = st.empty()
         info_placeholder.info("Preparing image for upscaling...")
@@ -218,14 +278,19 @@ def main():
                 else RGBAStrategy(img_bytes)
             )
 
+            print(f"Image mode: {original_img.mode}")
+            print(
+                f"Selected strategy: {'RGBAStrategy' if original_img.mode == 'RGBA' else 'RGBStrategy'}"
+            )
+
             if original_img.mode == "RGBA":
                 strategy = cast(RGBAStrategy, strategy)
 
                 info_placeholder.info("⚙ Preprocessing the image...")
                 # input_arr, alpha_arr, orig_size = preprocess_rgba(img_bytes)  # type: ignore
 
-                input_arr, alpha_arr, orig_size = cast(
-                    tuple[np.ndarray, np.ndarray, tuple[int, int]],
+                input_arr, alpha_arr, orig_size, was_reshaped = cast(
+                    tuple[np.ndarray, np.ndarray, tuple[int, int], bool],
                     strategy.preprocess(),
                 )
 
@@ -243,6 +308,7 @@ def main():
                         output,
                         alpha_out,
                         orig_size,
+                        was_reshaped,
                         do_retain_size,
                     ),
                 )
@@ -254,8 +320,8 @@ def main():
 
                 info_placeholder.info("⚙ Preprocessing the image...")
 
-                input_arr, orig_size = cast(
-                    tuple[np.ndarray, tuple[int, int]],
+                input_arr, orig_size, was_reshaped = cast(
+                    tuple[np.ndarray, tuple[int, int], bool],
                     strategy.preprocess(),
                 )
 
@@ -266,7 +332,9 @@ def main():
 
                 info_placeholder.info("⚙ Postprocessing the image...")
 
-                sr_img = strategy.postprocess(output, orig_size, do_retain_size)
+                sr_img = strategy.postprocess(
+                    output, orig_size, was_reshaped, do_retain_size
+                )
 
                 # sr_img = postprocess(output, orig_size)
                 info_placeholder.info("🏁 Finished!")
@@ -277,6 +345,7 @@ def main():
             with col2:
                 st.header("Upscaled Image")
                 st.image(sr_img)
+                st.write(f"Dimensions: {sr_img.width} x {sr_img.height}")
 
             buffer = convert_img_to_bytes(sr_img)
 
