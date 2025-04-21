@@ -10,6 +10,7 @@ import streamlit as st
 import torch
 from PIL import Image
 from streamlit.watcher import local_sources_watcher
+from streamlit_image_comparison import image_comparison
 
 from strategy import RGBAStrategy, RGBStrategy
 
@@ -94,16 +95,10 @@ def main():
 
     if uploaded_img:
         img_bytes = uploaded_img.read()
-        col1, col2 = st.columns(2)
         original_img = Image.open(BytesIO(img_bytes))
         input_name = model.get_inputs()[0].name
 
         print(f"type of input_name: {type(input_name)}")
-
-        with col1:
-            st.header("Original Image")
-            st.image(original_img)
-            st.write(f"Dimensions: {original_img.width} x {original_img.height}")
 
         with st.status("Upscaling image...", expanded=True) as status:
             strategy = (
@@ -121,7 +116,6 @@ def main():
                 strategy = cast(RGBAStrategy, strategy)
 
                 st.write("📐 Preprocessing the image...")
-                # input_arr, alpha_arr, orig_size = preprocess_rgba(img_bytes)  # type: ignore
 
                 input_arr, alpha_arr, orig_size, was_reshaped = cast(
                     tuple[np.ndarray, np.ndarray, tuple[int, int], bool],
@@ -129,7 +123,6 @@ def main():
                 )
 
                 st.write("🏃 Running the model...")
-                # output = model.run(None, {input_name: input_arr})[0]
                 output = strategy.run_model(model, input_name, input_arr)
 
                 print(f"Output: {type(output)}")
@@ -161,7 +154,6 @@ def main():
                 )
 
                 st.write("🏃‍♀️ Running the model...")
-                # output = model.run(None, {input_name: input_arr})[0]
                 output = strategy.run_model(model, input_name, input_arr)
 
                 print(f"Output: {type(output)}")
@@ -172,14 +164,28 @@ def main():
                     output, orig_size, was_reshaped, do_retain_size
                 )
 
-                # sr_img = postprocess(output, orig_size)
                 status.update(label="🏁 Finished!", state="complete", expanded=False)
 
         if sr_img:
+            image_comparison(
+                img1=original_img,  # type: ignore
+                img2=sr_img,  # type: ignore
+                label1="Original image",
+                label2="Upscaled image",
+                show_labels=True,
+                in_memory=True,
+                make_responsive=True,
+                starting_position=50,
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write(
+                    f"Original dimensions: {original_img.width} x {original_img.height}"
+                )
             with col2:
-                st.header("Upscaled Image")
-                st.image(sr_img)
-                st.write(f"Dimensions: {sr_img.width} x {sr_img.height}")
+                st.write(f"Upscaled dimensions: {sr_img.width} x {sr_img.height}")
 
             buffer = convert_img_to_bytes(sr_img)
 
