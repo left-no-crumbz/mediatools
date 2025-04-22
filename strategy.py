@@ -41,6 +41,10 @@ class Strategy:
     def postprocess(self):
         pass
 
+    # to be abstracted
+    def run_pipeline(self):
+        pass
+
 
 class RGBStrategy(Strategy):
     def preprocess(self) -> tuple[np.ndarray, tuple[int, int], bool]:
@@ -98,6 +102,20 @@ class RGBStrategy(Strategy):
                 img = img.resize(new_size, Image.Resampling.LANCZOS)
 
         print(f"Original size: {orig_size}, Output image size: {img.size}")
+        return img
+
+    def run_pipeline(
+        self,
+        model: ort.InferenceSession,
+        input_name: str,
+        do_retain_size: bool = False,
+    ) -> Image.Image:
+        st.write("📐 Preprocessing the image...")
+        input_arr, orig_size, was_reshaped = self.preprocess()
+        st.write("🏃‍♀️ Running the model...")
+        output = self.run_model(model, input_name, input_arr)
+        st.write("✨ Postprocessing the image...")
+        img = self.postprocess(output, orig_size, was_reshaped, do_retain_size)
         return img
 
 
@@ -181,4 +199,20 @@ class RGBAStrategy(Strategy):
         img.putalpha(alpha_img)
         print(f"Original size: {orig_size}, Output image size: {img.size}")
 
+        return img
+
+    def run_pipeline(
+        self,
+        model: ort.InferenceSession,
+        input_name: str,
+        do_retain_size: bool = False,
+    ) -> Image.Image:
+        st.write("📐 Preprocessing the image...")
+        input_arr, alpha_arr, orig_size, was_reshaped = self.preprocess()
+        st.write("🏃‍♀️ Running the model...")
+        output = self.run_model(model, input_name, input_arr)
+        st.write("✨ Postprocessing the image...")
+        img = self.postprocess(
+            output, alpha_arr, orig_size, was_reshaped, do_retain_size
+        )
         return img

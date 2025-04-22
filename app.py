@@ -4,15 +4,14 @@ from time import perf_counter
 from types import ModuleType
 from typing import cast
 
-import numpy as np
 import onnxruntime as ort
 import streamlit as st
 import torch
 from PIL import Image
 from streamlit.watcher import local_sources_watcher
-from streamlit_image_comparison import image_comparison
 
 from strategy import RGBAStrategy, RGBStrategy
+from streamlit_image_comparison import image_comparison
 
 original_get_module_paths = local_sources_watcher.get_module_paths
 
@@ -28,11 +27,11 @@ def profiler(func):
     return wrapper
 
 
-# TODO: PNG to SVG
-# FIXME: Rectangular images not being processed
-# FIXME: Bug where the entire program is re-run if a button or the checkbox is pressed
+# TODO: Multi-pages for different features like:
+# PNG to SVG
+# Background remover
 # TODO: Pad the image instead of resizing it
-# TODO: Use fragments if possible
+# TODO: Allow to download in different formats
 
 
 @lru_cache
@@ -76,24 +75,20 @@ def convert_img_to_bytes(img):
     return byte_im
 
 
-@st.fragment()
-def show_checkbox() -> bool:
-    return st.checkbox("Retain original size")
-
-
 @profiler
 def main():
     st.image(
         "assets/realesrgan_logo.png",
         use_container_width=True,
     )
+
     uploaded_img = st.file_uploader(
         "Please upload a file you want to upscale.",
         type=["png", "jpg", "jpeg", "webp"],
         accept_multiple_files=False,
     )
 
-    do_retain_size = show_checkbox()
+    do_retain_size = st.checkbox("Retain original size")
 
     device, model = load_model()
 
@@ -120,57 +115,11 @@ def main():
 
             if original_img.mode == "RGBA":
                 strategy = cast(RGBAStrategy, strategy)
-
-                st.write("📐 Preprocessing the image...")
-
-                input_arr, alpha_arr, orig_size, was_reshaped = cast(
-                    tuple[np.ndarray, np.ndarray, tuple[int, int], bool],
-                    strategy.preprocess(),
-                )
-
-                st.write("🏃 Running the model...")
-                output = strategy.run_model(model, input_name, input_arr)
-
-                print(f"Output: {type(output)}")
-
-                alpha_out = alpha_arr
-                st.write("✨ Postprocessing the image...")
-
-                sr_img = cast(
-                    Image.Image,
-                    strategy.postprocess(
-                        output,
-                        alpha_out,
-                        orig_size,
-                        was_reshaped,
-                        do_retain_size,
-                    ),
-                )
-
-                status.update(label="🏁 Finished!", state="complete", expanded=False)
-
+                sr_img = strategy.run_pipeline(model, input_name, do_retain_size)
             else:
                 strategy = cast(RGBStrategy, strategy)
-
-                st.write("📐 Preprocessing the image...")
-
-                input_arr, orig_size, was_reshaped = cast(
-                    tuple[np.ndarray, tuple[int, int], bool],
-                    strategy.preprocess(),
-                )
-
-                st.write("🏃‍♀️ Running the model...")
-                output = strategy.run_model(model, input_name, input_arr)
-
-                print(f"Output: {type(output)}")
-
-                st.write("✨ Postprocessing the image...")
-
-                sr_img = strategy.postprocess(
-                    output, orig_size, was_reshaped, do_retain_size
-                )
-
-                status.update(label="🏁 Finished!", state="complete", expanded=False)
+                sr_img = strategy.run_pipeline(model, input_name, do_retain_size)
+            status.update(label="🏁 Finished!", state="complete", expanded=False)
 
         if sr_img:
             image_comparison(
