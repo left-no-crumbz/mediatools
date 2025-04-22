@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: streamlit_image_comparison
+Version: 0.0.5
+Requires-Dist: streamlit
+Requires-Dist: Pillow
+Requires-Dist: requests
+Requires-Dist: numpy
+Dynamic: requires-dist
