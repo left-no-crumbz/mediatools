@@ -10,10 +10,12 @@ import torch
 from PIL import Image
 from streamlit.watcher import local_sources_watcher
 
-from strategy import RGBAStrategy, RGBStrategy
 from streamlit_image_comparison import image_comparison
+from utils.strategy import RGBAStrategy, RGBStrategy
 
 original_get_module_paths = local_sources_watcher.get_module_paths
+
+st.set_page_config(page_title="Upscaler", page_icon="📈")
 
 
 def profiler(func):
@@ -32,6 +34,7 @@ def profiler(func):
 # Background remover
 # TODO: Pad the image instead of resizing it
 # TODO: Allow to download in different formats
+# TODO: Slider for model
 
 
 @lru_cache
@@ -77,10 +80,9 @@ def convert_img_to_bytes(img):
 
 @profiler
 def main():
-    st.image(
-        "assets/realesrgan_logo.png",
-        use_container_width=True,
-    )
+    style_heading = "text-align: center; font-size: 4rem;"
+
+    st.html(f"<h1 style='{style_heading}'>☝ Image Upscaler</h1>")
 
     uploaded_img = st.file_uploader(
         "Please upload a file you want to upscale.",
