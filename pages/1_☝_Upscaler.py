@@ -13,9 +13,7 @@ from streamlit.watcher import local_sources_watcher
 from streamlit_image_comparison import image_comparison
 from utils.strategy import RGBAStrategy, RGBStrategy
 
-original_get_module_paths = local_sources_watcher.get_module_paths
-
-st.set_page_config(page_title="Upscaler", page_icon="📈")
+st.set_page_config(page_title="Image Upscaler", page_icon="☝")
 
 
 def profiler(func):
@@ -43,6 +41,9 @@ def patched_get_module_paths(module: ModuleType) -> set[str]:
         return set([])
 
     return original_get_module_paths(module)
+
+
+original_get_module_paths = local_sources_watcher.get_module_paths
 
 
 local_sources_watcher.get_module_paths = patched_get_module_paths
