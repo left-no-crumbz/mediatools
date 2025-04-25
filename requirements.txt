@@ -4,4 +4,5 @@ onnxruntime
 streamlit
 pillow
 torch
+streamlit-card
 -e .
