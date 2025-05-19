@@ -1,0 +1,14 @@
+{
+    "tools": [
+        {
+            "id": 1,
+            "name": "Image Upscaler",
+            "description": "Upscale your images up to 4x with AI-powered enhancement",
+            "category": "Image Editing",
+            "emoji": "👆",
+            "image": "https://via.placeholder.com/400x225",
+            "users": "2.4k"
+        }
+        
+    ]
+}
