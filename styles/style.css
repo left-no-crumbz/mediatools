@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Geist', sans-serif; 
+}
+
+/* Main theme colors and styling */
+:root {
+    --primary-color: #a855f7;
+    --primary-light: #c084fc;
+    --dark-bg: #030712;
+    --card-bg: #111827;
+    --border-color: #374151;
+    --text-color: #f3f4f6;
+    --text-secondary: #9ca3af;
+}
+
+.stMain .block-container {
+    max-width: 1200px; /* Or whatever max-width you prefer */
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* horizontal divider */    
+.full-width-divider {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+/* General styling */
+.stApp {
+    background-color: var(--dark-bg);
+    color: var(--text-color);
+}
+
+header.stAppHeader {
+background-color: transparent;
+}
+
+section.stMain .block-container {
+    padding-top: 0rem;
+}
+
+/* Header styling */
+.gradient-text {
+    background-image: linear-gradient(to right, #B366FA, #E371F5, #F687B3);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* Card styling */
+.tool-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    height: 100%;
+}
+.tool-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.15);
+}
+.card-content {
+    padding: 15px;
+}
+.card-image {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+}
+.card-image-container {
+    overflow: hidden;
+    background-color: #374151;
+}
+.card-image:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+}
+
+/* Badge styling */
+.badge {
+    background-color: #374151;
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Button styling */
+.custom-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.custom-button:hover {
+    background-color: var(--primary-light);
+}
+.ghost-button {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.ghost-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--text-secondary);
+}
+
+/* Search bar styling */
+.stTextInput > div > div > input {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.stTextInput > div, .stTextInput > div > div {
+    background-color: var(--card-bg);
+}
+
+/* Selectbox styling */
+.stSelectbox > div > div {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Hide Streamlit branding */
+header {visibility: hidden; display: none;}
+#MainMenu {visibility: hidden; display: none;}
+footer {visibility: hidden; display: none;}
+
+
+
+/* User avatar styling */
+.user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #4b5563;
+    display: inline-block;
+    margin-right: -8px;
+    border: 2px solid var(--card-bg);
+}
+
+/* List view styling */
+.list-item {
+    display: flex;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 12px;
+}
+.list-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.15);
+}
+.list-image {
+    width: 150px;
+    height: 100%;
+    object-fit: cover;
+}
+.list-content {
+    padding: 15px;
+    flex: 1;
+}
