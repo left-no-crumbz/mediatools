@@ -1,2 +1,11 @@
 [server]
 runOnSave = false
+
+[client]
+showSidebarNavigation = false
+
+[theme]
+primaryColor="#a855f7"
+backgroundColor="#030712"
+textColor="#f3f4f6"
+secondaryBackgroundColor="#1f2937"
