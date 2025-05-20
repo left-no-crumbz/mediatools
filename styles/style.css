@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 
-html, body, [class*="css"] {
+html, body, [class*="css"], * {
     font-family: 'Geist', sans-serif; 
 }
 
@@ -16,7 +16,7 @@ html, body, [class*="css"] {
 }
 
 .stMain .block-container {
-    max-width: 1200px; /* Or whatever max-width you prefer */
+    max-width: 1200px;
     padding-top: 1rem;
     padding-bottom: 1rem;
 }
@@ -123,21 +123,44 @@ section.stMain .block-container {
     border-color: var(--text-secondary);
 }
 
+
 /* Search bar styling */
-.stTextInput > div > div > input {
+.stButtonGroup {
+    display: flex;
+    justify-content: end;
+}
+.stElementContainer + .stHorizontalBlock {
+    width: 70%;
+    justify-self: center;
+    align-self: center;
+    margin-bottom: 3rem;
+}
+
+.stTextInput > div > div > input, .stTextInput > div > div > input::placeholder {
+    font-family: 'Geist', sans-serif;
+    font-weight: 250;
     background-color: var(--card-bg);
     border-color: var(--border-color);
     color: var(--text-color);
 }
 
+
+
 .stTextInput > div, .stTextInput > div > div {
+    height: 3rem;
     background-color: var(--card-bg);
 }
 
 /* Selectbox styling */
-.stSelectbox > div > div {
+.stSelectbox > div, .stSelectbox > div > div {
+    border-radius: 6px;
+    height: 3rem;
     background-color: var(--card-bg);
     border-color: var(--border-color);
+}
+
+.stSelectbox > div > div > div > div {
+    height: 1.2rem;
 }
 
 /* Hide Streamlit branding */
@@ -168,6 +191,7 @@ footer {visibility: hidden; display: none;}
     transition: all 0.3s ease;
     margin-bottom: 12px;
 }
+
 .list-item:hover {
     border-color: var(--primary-color);
     box-shadow: 0 0 15px rgba(168, 85, 247, 0.15);
