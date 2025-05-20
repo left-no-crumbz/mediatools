@@ -8,7 +8,6 @@ import pandas as pd
 
 tools = pd.read_json("tools.json")
 
-
 st.set_page_config(page_title="MediaTools", page_icon="🛠", layout="wide", initial_sidebar_state="collapsed")
 
 with open("styles/style.css") as css:
@@ -58,8 +57,59 @@ if __name__ == "__main__":
     if category_filter != "All Categories":
         tools = tools[tools['category'] == category_filter]
     
-    view_sort_cols = st.columns(2, vertical_alignment="center")
+    view_sort_cols = st.columns([2, 1], vertical_alignment="center")
     with view_sort_cols[0]:
-        st.html("<h2 style='margin: 0;'>Popular Tools</h2>")
+        st.html("<h2 style='margin: 0; font-weight: 500'>Popular Tools</h2>")
     with view_sort_cols[1]:
-        view_type = st.segmented_control("View", [":material/grid_on:", ":material/list:"], label_visibility="hidden")
+        view_type = st.segmented_control("View", [":material/grid_on:", ":material/list:"], label_visibility="hidden", default=":material/grid_on:")
+    
+    if view_type == ":material/grid_on:":
+        # Create a grid layout
+        num_cols = 4  # Number of columns in the grid
+        
+        # Create rows with appropriate number of columns
+        for i in range(0, len(tools), num_cols):
+            cols = st.columns(num_cols)
+            for j in range(num_cols):
+                if i + j < len(tools):
+                    tool = tools.iloc[i + j]
+                    with cols[j]:
+                        with st.container():
+                            st.markdown(f"""
+                            <div class="tool-card">
+                                <div class="card-image-container">
+                                    <img src="{tool['image']}" class="card-image" alt="{tool['name']}">
+                                </div>
+                                <div class="card-content">
+                                    <span class="badge">{tool['category']}</span>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                        <h3>{tool['name']}</h3>
+                                        <span style="font-size: 24px;">{tool['emoji']}</span>
+                                    </div>
+                                    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">{tool['description']}</p>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                                        <button class="custom-button">Try Tool</button>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+    else:  # List view
+        for i, tool in tools.iterrows():
+            st.markdown(f"""
+            <div class="list-item">
+                <img src="{tool['image']}" class="list-image" alt="{tool['name']}">
+                <div class="list-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 24px; margin-right: 8px;">{tool['emoji']}</span>
+                            <h3>{tool['name']}</h3>
+                        </div>
+                        <span class="badge">{tool['category']}</span>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">{tool['description']}</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                        <button class="custom-button">Try Tool</button>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
