@@ -1,5 +1,6 @@
 [server]
 runOnSave = false
+enableStaticServing = true
 
 [client]
 showSidebarNavigation = false
