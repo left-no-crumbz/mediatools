@@ -64,35 +64,30 @@ if __name__ == "__main__":
         view_type = st.segmented_control("View", [":material/grid_on:", ":material/list:"], label_visibility="hidden", default=":material/grid_on:")
     
     if view_type == ":material/grid_on:":
-        # Create a grid layout
-        num_cols = 4  # Number of columns in the grid
+        grid_html = ['<div class="tools-grid">']
         
-        # Create rows with appropriate number of columns
-        for i in range(0, len(tools), num_cols):
-            cols = st.columns(num_cols)
-            for j in range(num_cols):
-                if i + j < len(tools):
-                    tool = tools.iloc[i + j]
-                    with cols[j]:
-                        with st.container():
-                            st.markdown(f"""
-                            <div class="tool-card">
-                                <div class="card-image-container">
-                                    <img src="{tool['image']}" class="card-image" alt="{tool['name']}">
-                                </div>
-                                <div class="card-content">
-                                    <span class="badge">{tool['category']}</span>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                        <h3>{tool['name']}</h3>
-                                        <span style="font-size: 24px;">{tool['emoji']}</span>
-                                    </div>
-                                    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">{tool['description']}</p>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-                                        <button class="custom-button">Try Tool</button>
-                                    </div>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
+        for _, tool in tools.iterrows():
+            grid_html.append(f"""
+            <div class="tool-card">
+                <div class="card-image-container">
+                    <img src="{tool['image']}" class="card-image" alt="{tool['name']}">
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <span class="badge">{tool['category']}</span>
+                        <span class="card-emoji">{tool['emoji']}</span>
+                    </div>
+                    <div class="card-body">
+                        <h3>{tool['name']}</h3>
+                        <p>{tool['description']}</p>
+                    </div>
+                </div>
+            </div>
+            """)
+        
+        grid_html.append('</div>')
+        
+        st.html("\n".join(grid_html))
     else:  # List view
         for i, tool in tools.iterrows():
             st.markdown(f"""
