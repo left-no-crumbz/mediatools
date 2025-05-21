@@ -156,6 +156,12 @@ section.stMain .block-container {
     grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
     gap: 1.5rem;
     padding: 1rem 0;
+    position: relative;
+    width: 90vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -45vw;
+    margin-right: -45vw;
 }
 
 /* Badge styling */
@@ -194,6 +200,15 @@ section.stMain .block-container {
     justify-self: center;
     align-self: center;
     margin-bottom: 3rem;
+}
+
+.stElementContainer + .stHorizontalBlock + .stHorizontalBlock {
+    position: relative;
+    width: 90vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -45vw;
+    margin-right: -45vw;
 }
 
 .stTextInput > div > div > input, .stTextInput > div > div > input::placeholder {
