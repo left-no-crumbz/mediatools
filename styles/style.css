@@ -278,7 +278,6 @@ footer {visibility: hidden; display: none;}
 }
 .list-image {
     width: 150px;
-    height: 100%;
     object-fit: cover;
 }
 .list-content {
