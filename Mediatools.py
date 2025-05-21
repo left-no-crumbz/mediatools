@@ -6,12 +6,19 @@ import streamlit as st
 from streamlit.watcher import local_sources_watcher
 import pandas as pd
 
-tools = pd.read_json("tools.json")
+@st.cache_data
+def get_tools():
+    return pd.read_json("tools.json")
 
 st.set_page_config(page_title="MediaTools", page_icon="🛠", layout="wide", initial_sidebar_state="collapsed")
 
-with open("styles/style.css") as css:
-    st.html(f"<style>{css.read()}</style>")
+@lru_cache(maxsize=1)
+def get_css_content():
+    with open("styles/style.css", "r") as f:
+        return f.read()
+
+def inject_css():
+    st.html(f"<style>{get_css_content()}</style>")
 
 @lru_cache
 def patched_get_module_paths(module: ModuleType) -> set[str]:
@@ -33,7 +40,10 @@ def read_local_img(filepath: str):
         return data
 
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
+    tools = get_tools()
+    inject_css()
+    
     st.markdown('<h3 class="gradient-text" style="margin-left: calc(52% - 50vw);">MediaTools</h3>', unsafe_allow_html=True)
     st.markdown('<div class="full-width-divider"></div>', unsafe_allow_html=True)
     
