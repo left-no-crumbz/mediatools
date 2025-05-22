@@ -1,11 +1,12 @@
 from io import BytesIO
-from typing import Literal
-
 import numpy as np
-import onnxruntime as ort
 import streamlit as st
 from PIL import Image
 
+from typing import Literal, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import onnxruntime as ort
 
 class Strategy:
     def __init__(
@@ -29,7 +30,7 @@ class Strategy:
 
     @st.cache_data(show_spinner=False)
     def run_model(
-        _self, _model: ort.InferenceSession, input_name: str, input_arr: np.ndarray
+        _self, _model: "ort.InferenceSession", input_name: str, input_arr: np.ndarray
     ):
         return _model.run(None, {input_name: input_arr})[0]
 
@@ -106,7 +107,7 @@ class RGBStrategy(Strategy):
 
     def run_pipeline(
         self,
-        model: ort.InferenceSession,
+        model: "ort.InferenceSession",
         input_name: str,
         do_retain_size: bool = False,
     ) -> Image.Image:
@@ -203,7 +204,7 @@ class RGBAStrategy(Strategy):
 
     def run_pipeline(
         self,
-        model: ort.InferenceSession,
+        model: "ort.InferenceSession",
         input_name: str,
         do_retain_size: bool = False,
     ) -> Image.Image:
