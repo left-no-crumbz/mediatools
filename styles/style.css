@@ -150,6 +150,10 @@ section.stMain .block-container {
     }
 }
 
+.tool-card-link {
+    text-decoration: none;
+}
+
 /* Tools Grid Layout */
 .tools-grid {
     display: grid;
