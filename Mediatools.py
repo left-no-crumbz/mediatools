@@ -124,7 +124,7 @@ def create_tools_list(tools_df: pd.DataFrame) -> str:
     return f'<div class="tools-list">{items_html}</div>'
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="MediaTools", page_icon="🛠", layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="MediaTools", page_icon="📷", layout="wide", initial_sidebar_state="collapsed")
     
     tools = get_tools()
     inject_css()
@@ -160,8 +160,5 @@ if __name__ == "__main__":
     
     if view_type == ":material/grid_on:":
         st.html(create_tools_grid(tools))
-        is_clicked = st.button("Click Me!")
-        if is_clicked:
-            st.switch_page("pages/upscaler.py")
     else:
         st.html(create_tools_list(tools))
