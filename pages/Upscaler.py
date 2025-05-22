@@ -1,20 +1,22 @@
+import sys
 from functools import lru_cache
 from io import BytesIO
+from pathlib import Path
 from time import perf_counter
 from types import ModuleType
 from typing import cast
 
-import onnxruntime as ort
 import streamlit as st
 import torch
 from PIL import Image
 from streamlit.watcher import local_sources_watcher
-
 from streamlit_image_comparison import image_comparison
-from utils.strategy import RGBAStrategy, RGBStrategy
 
-st.set_page_config(page_title="Image Upscaler", page_icon="☝")
-
+project_root = str(Path(__file__).parent.parent)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+import onnxruntime as ort # noqa: E402
+from utils.strategy import RGBAStrategy, RGBStrategy  # noqa: E402
 
 def profiler(func):
     def wrapper(*args, **kwargs):
@@ -39,13 +41,10 @@ def profiler(func):
 def patched_get_module_paths(module: ModuleType) -> set[str]:
     if module.__name__.startswith("torch"):
         return set([])
-
     return original_get_module_paths(module)
 
 
 original_get_module_paths = local_sources_watcher.get_module_paths
-
-
 local_sources_watcher.get_module_paths = patched_get_module_paths
 
 
@@ -81,6 +80,7 @@ def convert_img_to_bytes(img):
 
 @profiler
 def main():
+    st.set_page_config(page_title="Image Upscaler", page_icon="☝")
     style_heading = "text-align: center; font-size: 4rem;"
 
     st.html(f"<h1 style='{style_heading}'>☝ Image Upscaler</h1>")
