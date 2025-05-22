@@ -10,7 +10,6 @@ import pandas as pd
 def get_tools():
     return pd.read_json("tools.json")
 
-st.set_page_config(page_title="MediaTools", page_icon="🛠", layout="wide", initial_sidebar_state="collapsed")
 
 @lru_cache(maxsize=1)
 def get_css_content():
@@ -41,52 +40,92 @@ def read_local_img(filepath: str):
 
 
 def create_tool_card(tool: pd.Series) -> str:
-    return f"""
-    <div class="tool-card">
-        <div class="card-image-container">
-            <img src="{tool['image']}" class="card-image" alt="{tool['name']}">
-        </div>
-        <div class="card-content">
-            <div class="card-header">
-                <span class="badge">{tool['category']}</span>
-                <span class="card-emoji">{tool['emoji']}</span>
+    if pd.notna(tool.get('page')):
+        return f"""
+        <a href="/{tool['page']}" class="tool-card-link">
+            <div class="tool-card">
+                <div class="card-image-container">
+                    <img src="{tool['image']}" class="card-image" alt="{tool['name']}">
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <span class="badge">{tool['category']}</span>
+                        <span class="card-emoji">{tool['emoji']}</span>
+                    </div>
+                    <div class="card-body">
+                        <h3>{tool['name']}</h3>
+                        <p>{tool['description']}</p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <h3>{tool['name']}</h3>
-                <p>{tool['description']}</p>
+        </a>
+        """
+    else:
+        return f"""
+        <div class="tool-card">
+            <div class="card-image-container">
+                <img src="{tool['image']}" class="card-image" alt="{tool['name']}">
+            </div>
+            <div class="card-content">
+                <div class="card-header">
+                    <span class="badge">{tool['category']}</span>
+                    <span class="card-emoji">{tool['emoji']}</span>
+                </div>
+                <div class="card-body">
+                    <h3>{tool['name']}</h3>
+                    <p>{tool['description']}</p>
+                </div>
             </div>
         </div>
-    </div>
-    """
+        """
 
 def create_list_item(tool: dict) -> str:
-    return f"""
-    <div class="list-item">
-        <img src="{tool['image']}" class="list-image" alt="{tool['name']}">
-        <div class="list-content">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center;">
-                    <span style="font-size: 24px; margin-right: 8px;">{tool['emoji']}</span>
-                    <h3>{tool['name']}</h3>
+    if 'page' in tool and tool['page']:
+        return f"""
+        <a href="/{tool['page']}" class="list-item-link">
+            <div class="list-item">
+                <img src="{tool['image']}" class="list-image" alt="{tool['name']}">
+                <div class="list-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 24px; margin-right: 8px;">{tool['emoji']}</span>
+                            <h3>{tool['name']}</h3>
+                        </div>
+                        <span class="badge">{tool['category']}</span>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">{tool['description']}</p>
                 </div>
-                <span class="badge">{tool['category']}</span>
             </div>
-            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">{tool['description']}</p>
+        </a>
+        """
+    else:
+        return f"""
+        <div class="list-item">
+            <img src="{tool['image']}" class="list-image" alt="{tool['name']}">
+            <div class="list-content">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 24px; margin-right: 8px;">{tool['emoji']}</span>
+                        <h3>{tool['name']}</h3>
+                    </div>
+                    <span class="badge">{tool['category']}</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">{tool['description']}</p>
+            </div>
         </div>
-    </div>
-    """
+        """
 
-@st.cache_data
 def create_tools_grid(tools_df: pd.DataFrame) -> str:
     cards_html = "".join(create_tool_card(tool._asdict()) for tool in tools_df.itertuples())
     return f'<div class="tools-grid">{cards_html}</div>'
 
-@st.cache_data
 def create_tools_list(tools_df: pd.DataFrame) -> str:
     items_html = "".join(create_list_item(tool._asdict()) for tool in tools_df.itertuples())
     return f'<div class="tools-list">{items_html}</div>'
 
 if __name__ == "__main__":
+    st.set_page_config(page_title="MediaTools", page_icon="🛠", layout="wide", initial_sidebar_state="collapsed")
+    
     tools = get_tools()
     inject_css()
     
@@ -121,5 +160,8 @@ if __name__ == "__main__":
     
     if view_type == ":material/grid_on:":
         st.html(create_tools_grid(tools))
+        is_clicked = st.button("Click Me!")
+        if is_clicked:
+            st.switch_page("pages/upscaler.py")
     else:
         st.html(create_tools_list(tools))
