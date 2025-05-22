@@ -150,7 +150,7 @@ section.stMain .block-container {
     }
 }
 
-.tool-card-link {
+.tool-card-link, .list-item-link {
     text-decoration: none;
 }
 
