@@ -4,6 +4,5 @@ onnxruntime
 streamlit
 pillow
 torch
-streamlit-card
-streamllit-extras
+streamlit_image_comparison
 -e .
