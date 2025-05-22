@@ -5,62 +5,7 @@
         "description": "Upscale your images up to 4x with AI-powered enhancement",
         "category": "Image Editing",
         "emoji": "👆",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 2,
-        "name": "Video Trimmer",
-        "description": "Quickly trim and edit video clips online",
-        "category": "Video Editing",
-        "emoji": "✂️",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 3,
-        "name": "Audio Enhancer",
-        "description": "Clean up and enhance audio recordings automatically",
-        "category": "Audio Tools",
-        "emoji": "🔊",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 4,
-        "name": "Color Palette Generator",
-        "description": "Create beautiful color schemes from any image",
-        "category": "Design Tools",
-        "emoji": "🎨",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 5,
-        "name": "Background Remover",
-        "description": "Remove backgrounds from images with one click",
-        "category": "Image Editing",
-        "emoji": "✨",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 6,
-        "name": "Subtitle Generator",
-        "description": "Automatically generate subtitles for your videos",
-        "category": "Video Editing",
-        "emoji": "💬",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 7,
-        "name": "Image Compressor",
-        "description": "Compress images without losing quality",
-        "category": "Image Editing",
-        "emoji": "🗜️",
-        "image": "app/static/image-upscaler-card-img.png"
-    },
-    {
-        "id": 8,
-        "name": "AI Content Writer",
-        "description": "Generate creative content with AI assistance",
-        "category": "AI Tools",
-        "emoji": "✍️",
-        "image": "app/static/image-upscaler-card-img.png"
+        "image": "app/static/image-upscaler-card-img.png",
+        "page": "upscaler"
     }
 ]
