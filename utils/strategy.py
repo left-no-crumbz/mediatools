@@ -52,14 +52,13 @@ class RGBStrategy(Strategy):
         _img = Image.open(BytesIO(self._img_bytes)).convert("RGB")
         orig_size = _img.size
 
-        aspect_ratio = orig_size[0] / orig_size[1]
-        is_square = abs(aspect_ratio - 1.0) < 0.01
+        is_square = orig_size[0] == orig_size[1]
 
         if not is_square:
-            _img = _img.resize(
-                self._target_size,
-                self.get_resample_method(self._target_size, orig_size),
-            )
+            max_dim = max(orig_size[0], orig_size[1])
+            new_img = Image.new("RGB", (max_dim, max_dim), (0, 0, 0))
+            new_img.paste(_img, (0, 0))
+            _img = new_img
 
         arr = np.array(_img).astype(np.float32)
         arr = arr.transpose(2, 0, 1)
@@ -77,6 +76,13 @@ class RGBStrategy(Strategy):
         arr = np.clip(arr * 255.0, 0, 255).astype(np.uint8, copy=False)
         img = Image.fromarray(arr)
 
+        grayscale = img.convert("L")
+        threshold = 10
+        mask = grayscale.point(lambda p: 0 if p < threshold else 255)
+        bbox = mask.getbbox()
+        if bbox:
+            img = img.crop(bbox)
+        
         if do_retain_size:
             resample_method = self.get_resample_method(
                 (img.width, img.height), orig_size
@@ -84,16 +90,6 @@ class RGBStrategy(Strategy):
             img = img.resize(orig_size, resample_method)
 
         elif was_reshaped:
-            upscale_factor = img.width / self._target_size[0]
-            upscaled_width = int(orig_size[0] * upscale_factor)
-            upscaled_height = int(orig_size[1] * upscale_factor)
-            upscaled_size = (upscaled_width, upscaled_height)
-
-            resample_method = self.get_resample_method(
-                (img.width, img.height), upscaled_size
-            )
-            img = img.resize(upscaled_size, resample_method)
-
             MAX_PIXELS = 178_956_970
             current_pixels = img.width * img.height
             if current_pixels > MAX_PIXELS:
